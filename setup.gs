@@ -87,14 +87,17 @@ function setup() {
 
 const PLANILHA = '1nRWpjR6dF1mre2uApL0r5gTa87ENxyt8aCn1yAf1M6A';
 
-// Rode uma vez: coluna raiva_ate em Pets (a tag pública mostra só ela).
-function colunaRaiva() {
+// Coluna raiva_ate em Pets (a tag pública mostra só ela). Pet novo: arraste a fórmula de K para a linha nova.
+function corrigirRaiva() {
   const pets = SpreadsheetApp.openById(PLANILHA).getSheetByName('Pets');
-  pets.insertColumnAfter(10);
-  pets.getRange('K1').setValue('raiva_ate');
-  pets.getRange('K2').setFormula('=MAP(A2:A, LAMBDA(id, IF(id="", "", IFERROR(1/(1/MAXIFS(Vacinas!E:E, Vacinas!B:B, id, Vacinas!C:C, "Raiva")), ""))))');
+  Logger.log('Antes: ' + pets.getRange('K2').getFormula() + ' → ' + pets.getRange('K2').getDisplayValue());
+  pets.getRange('K2:K').clearContent();
+  const n = pets.getLastRow() - 1;
+  pets.getRange(2, 11, n, 1).setFormulas([...Array(n)].map((_, i) =>
+    [`=IFERROR(1/(1/MAXIFS(Vacinas!$E:$E, Vacinas!$B:$B, $A${i + 2}, Vacinas!$C:$C, "Raiva")), "")`]));
   pets.getRange('K:K').setNumberFormat('dd/mm/yyyy');
-  pets.getBandings().forEach(b => b.setRange(pets.getRange('A1:K' + pets.getLastRow())));
+  SpreadsheetApp.flush();
+  Logger.log('Depois: ' + pets.getRange('K2:K' + (n + 1)).getDisplayValues().join(' | '));
 }
 
 // Carteira privada: Implantar como app da Web, executar como "Eu", acesso "Somente eu".
