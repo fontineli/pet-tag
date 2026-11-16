@@ -1,6 +1,11 @@
 Carimbo de data/hora,Pet,Vacina,Data de aplicação,Próxima dose,Lote,Clínica / Veterinário,Comprovante
-01/11/2024 10:00:00,thor,V10,01/11/2024,01/11/2025,L111,Clínica Pet,
-01/11/2025 10:00:00,thor,V10,01/11/2025,01/11/2026,L222,Clínica Pet,"https://drive.google.com/open?id=a, https://drive.google.com/open?id=b"
-06/12/2025 10:00:00,thor,Raiva,06/12/2025,06/12/2026,R9,Clínica Pet,
-15/02/2026 10:00:00,thor,Giárdia,15/02/2026,,,Clínica Pet,
+24/09/2025 10:00:00,luck,Antipulgas,24/09/2025,24/12/2025,,Bravecto 10-20 kg,
+17/10/2025 10:00:00,luck,V10,17/10/2025,07/11/2025,015/24,Dra. Tatiane Moura (Equilibrium),
+17/10/2025 10:00:00,luck,Gripe,17/10/2025,07/11/2025,001/24,Dra. Tatiane Moura (Equilibrium),
+31/10/2025 10:00:00,luck,Raiva,31/10/2025,31/10/2026,11/24,UVZ Parnamirim,
+10/11/2025 10:00:00,luck,V10,10/11/2025,10/11/2026,015/24,Dra. Tatiane Moura (Equilibrium),
+10/11/2025 10:00:00,luck,Gripe,10/11/2025,10/11/2026,001/24,Dra. Tatiane Moura (Equilibrium),
+11/11/2026 10:00:00,luck,V10,11/11/2026,11/11/2027,012/25,Dra. Mariana Bandeira (VET Amiga),
+11/11/2026 10:00:00,luck,Raiva,11/11/2026,11/11/2027,020/25,Dra. Mariana Bandeira (VET Amiga),
+11/11/2026 10:00:00,luck,Gripe,11/11/2026,11/11/2027,002/25,Dra. Mariana Bandeira (VET Amiga),
 10/03/2026 10:00:00,luna,V4,10/03/2026,10/03/2027,,,
