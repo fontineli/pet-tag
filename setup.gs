@@ -91,7 +91,7 @@ const PLANILHA = '1nRWpjR6dF1mre2uApL0r5gTa87ENxyt8aCn1yAf1M6A';
 function corrigirRaiva() {
   const pets = SpreadsheetApp.openById(PLANILHA).getSheetByName('Pets');
   Logger.log('Antes: ' + pets.getRange('K2').getFormula() + ' → ' + pets.getRange('K2').getDisplayValue());
-  pets.getRange('K2:K').clearContent();
+  pets.getRange('K2:K').clearContent().clearDataValidations(); // K nasceu herdando o checkbox de J
   const n = pets.getLastRow() - 1;
   pets.getRange(2, 11, n, 1).setFormulas([...Array(n)].map((_, i) =>
     // planilha em pt-BR: argumentos separados por ";"
