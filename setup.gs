@@ -85,22 +85,6 @@ function setup() {
   Logger.log('Responder formulário: ' + form.getPublishedUrl());
 }
 
-// Rode uma vez depois do setup: deixa a aba Pets com cara de tabela.
-function ajustar() {
-  const pets = SpreadsheetApp.openById('1nRWpjR6dF1mre2uApL0r5gTa87ENxyt8aCn1yAf1M6A').getSheetByName('Pets');
-  pets.deleteRows(5, pets.getMaxRows() - 4);           // só os 3 pets; novo pet = inserir linha abaixo
-  pets.deleteColumns(11, pets.getMaxColumns() - 10);   // some com K em diante
-  pets.getBandings().forEach(b => b.remove());
-  pets.getRange('A1:J4').applyRowBanding(SpreadsheetApp.BandingTheme.TEAL, true, false);
-  pets.getRange('A1:J1').setFontColor('#ffffff').setFontWeight('bold');
-  pets.getRange('A1:J4').setVerticalAlignment('middle').setBorder(true, true, true, true, true, true, '#d0d7de', null);
-  pets.setRowHeights(1, 4, 32);
-  pets.autoResizeColumns(1, 10);
-  pets.setColumnWidth(6, 320);
-  pets.getRange('F:F').setWrap(true);
-  pets.getRange('J:J').setHorizontalAlignment('center');
-}
-
 const PLANILHA = '1nRWpjR6dF1mre2uApL0r5gTa87ENxyt8aCn1yAf1M6A';
 
 // Rode uma vez: coluna raiva_ate em Pets (a tag pública mostra só ela).
