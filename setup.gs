@@ -100,3 +100,51 @@ function ajustar() {
   pets.getRange('F:F').setWrap(true);
   pets.getRange('J:J').setHorizontalAlignment('center');
 }
+
+const PLANILHA = '1nRWpjR6dF1mre2uApL0r5gTa87ENxyt8aCn1yAf1M6A';
+const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSf51VoDuO0zfEi1BM4Zdt7p7y3j-jJZruHdnhzoqy2y1ocvWQ/viewform';
+
+// Rode uma vez: coluna raiva_ate em Pets (a tag pública mostra só ela).
+function colunaRaiva() {
+  const pets = SpreadsheetApp.openById(PLANILHA).getSheetByName('Pets');
+  pets.insertColumnAfter(10);
+  pets.getRange('K1').setValue('raiva_ate');
+  pets.getRange('K2').setFormula('=MAP(A2:A, LAMBDA(id, IF(id="", "", IFERROR(1/(1/MAXIFS(Vacinas!E:E, Vacinas!B:B, id, Vacinas!C:C, "Raiva")), ""))))');
+  pets.getRange('K:K').setNumberFormat('dd/mm/yyyy');
+  pets.getBandings().forEach(b => b.setRange(pets.getRange('A1:K' + pets.getLastRow())));
+}
+
+// Carteira privada: Implantar como app da Web, executar como "Eu", acesso "Somente eu".
+function doGet(e) {
+  const filtro = (e.parameter.pet || '').trim().toLowerCase();
+  const [head, ...linhas] = SpreadsheetApp.openById(PLANILHA).getSheetByName('Vacinas').getDataRange().getDisplayValues();
+  const c = nome => head.indexOf(nome);
+  const regs = linhas
+    .map(l => ({ pet: l[c('Pet')].trim().toLowerCase(), vacina: l[c('Vacina')].trim(), aplic: l[c('Data de aplicação')],
+      prox: l[c('Próxima dose')], lote: l[c('Lote')], clinica: l[c('Clínica / Veterinário')], foto: (l[c('Comprovante')] || '').split(/[\s,]+/)[0] }))
+    .filter(r => r.pet && (!filtro || r.pet === filtro))
+    .sort((a, b) => dia_(b.aplic) - dia_(a.aplic));
+
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  let html = `<style>body{font:15px system-ui,sans-serif;margin:16px;color:#2b2b2b}h2{margin:24px 0 8px}
+    table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:6px 4px;border-bottom:1px solid #eee}
+    th{color:#777;font-weight:500}.atrasada{background:#f4c7c3}.vence{background:#fce8b2}a{text-decoration:none}</style>
+    <p><a target="_blank" href="${FORM_URL}">➕ Registrar vacina</a> · <a target="_blank" href="https://docs.google.com/spreadsheets/d/${PLANILHA}/edit">Planilha</a></p>`;
+  for (const pet of [...new Set(regs.map(r => r.pet))]) {
+    const visto = new Set();
+    html += `<h2>${esc_(pet)}</h2><table><tr><th>Vacina</th><th>Aplicação</th><th>Próxima</th><th>Lote</th><th>Clínica</th><th></th></tr>`;
+    for (const r of regs.filter(r => r.pet === pet)) {
+      const ultima = !visto.has(r.vacina.toLowerCase()); visto.add(r.vacina.toLowerCase()); // regs já vem do mais novo pro mais velho
+      const dias = r.prox ? (dia_(r.prox) - hoje) / 864e5 : null;
+      const cls = !ultima || dias === null ? '' : dias < 0 ? 'atrasada' : dias <= 30 ? 'vence' : '';
+      html += `<tr class="${cls}"><td>${esc_(r.vacina)}</td><td>${esc_(r.aplic)}</td><td>${esc_(r.prox)}</td><td>${esc_(r.lote)}</td>` +
+        `<td>${esc_(r.clinica)}</td><td>${r.foto.startsWith('http') ? `<a target="_blank" href="${esc_(r.foto)}">📷</a>` : ''}</td></tr>`;
+    }
+    html += '</table>';
+  }
+  if (!regs.length) html += '<p>Nenhuma vacina registrada.</p>';
+  return HtmlService.createHtmlOutput(html).setTitle('Vacinas').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function dia_(s) { const [d, m, y] = (s || '').split(' ')[0].split('/'); return y ? new Date(+y, m - 1, +d) : new Date(0); }
+function esc_(s) { return String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]); }

@@ -15,9 +15,6 @@
   header img { width:140px; height:140px; object-fit:cover; border-radius:50%; border:4px solid #fff; box-shadow:0 2px 8px #0002; }
   h1 { margin:8px 0 4px; font-size:1.8rem; }
   .msg { color:var(--muted); margin:0; }
-  .alert { padding:10px 12px; border-radius:10px; margin:8px 0; font-weight:600; }
-  .alert.overdue { background:#f4c7c3; color:#7a1d14; }
-  .alert.soon { background:#fce8b2; color:#6b4e00; }
   .botoes { display:grid; gap:8px; margin:16px 0; }
   .botoes a { display:flex; align-items:center; justify-content:center; min-height:48px; border-radius:12px; font-weight:600; text-decoration:none; color:#fff; background:#444; }
   .botoes a.wa { background:var(--green); }
@@ -26,27 +23,26 @@
   dl { margin:0; display:grid; grid-template-columns:auto 1fr; gap:4px 12px; }
   dt { color:var(--muted); }
   dd { margin:0; }
-  table { width:100%; border-collapse:collapse; font-size:.95rem; }
-  th, td { text-align:left; padding:6px 4px; border-bottom:1px solid #eee; }
-  th { color:var(--muted); font-weight:500; }
-  td a { text-decoration:none; }
+  .vencida { color:var(--red); font-weight:600; }
+  .tutor { display:block; text-align:center; color:var(--muted); font-size:.9rem; margin:24px 0 8px; }
   .erro { text-align:center; color:var(--muted); margin:32px 0 8px; }
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script type="module">
-import { parseCSV, toObjects, parseDateBR, daysUntil, vaccineStatus, latestByVaccine, findPet, isTrue, digits, phone, firstUrl } from './lib.js';
+import { parseCSV, toObjects, parseDateBR, daysUntil, findPet, isTrue, digits, phone } from './lib.js';
 
 // Preencha depois de "Publicar na web" (Arquivo → Compartilhar → Publicar na web → CSV).
 const CSV_PETS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vShPi8d03hNgRrlSkktA2QTn3NJL3yikUWb24kzTEAgceg9yQmYBeQ6IXbyN_1eS2BUy0xBwoA4UfR6/pub?gid=0&single=true&output=csv';
-const CSV_VACINAS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vShPi8d03hNgRrlSkktA2QTn3NJL3yikUWb24kzTEAgceg9yQmYBeQ6IXbyN_1eS2BUy0xBwoA4UfR6/pub?gid=443474978&single=true&output=csv';
+// Carteira completa: app da Web do Apps Script com acesso "Somente eu" (doGet em setup.gs).
+const VACINAS_URL = '';
 // Contato de reserva: aparece sempre, mesmo se a planilha não carregar.
 const CONTATO = { whatsapp: '5584988001207', telefone: '+5584988001207' };
 
 const params = new URLSearchParams(location.search);
 const exemplo = params.get('dados') === 'exemplo';
-const urls = exemplo ? ['./exemplo/pets.csv', './exemplo/vacinas.csv'] : [CSV_PETS, CSV_VACINAS];
+const url = exemplo ? './exemplo/pets.csv' : CSV_PETS;
 const app = document.getElementById('app');
 
 function el(tag, attrs = {}, ...kids) {
@@ -83,7 +79,7 @@ function erro(texto) {
   app.replaceChildren(el('main', {}, el('p', { class: 'erro' }, texto), botoes(null)));
 }
 
-function render(pet, vacinas) {
+function render(pet) {
   const hoje = new Date();
   const fmt = d => d ? d.toLocaleDateString('pt-BR') : '—';
   document.title = pet.nome;
@@ -96,50 +92,28 @@ function render(pet, vacinas) {
     el('h1', {}, pet.nome),
     pet.mensagem ? el('p', { class: 'msg' }, pet.mensagem) : null));
 
-  for (const v of latestByVaccine(vacinas)) {
-    const prox = parseDateBR(v['Próxima dose']);
-    const st = vaccineStatus(prox, hoje);
-    if (st === 'overdue') main.append(el('div', { class: 'alert overdue' }, `⚠ ${v.Vacina.trim()} atrasada desde ${fmt(prox)}`));
-    if (st === 'soon') {
-      const n = daysUntil(prox, hoje);
-      main.append(el('div', { class: 'alert soon' }, `${v.Vacina.trim()} vence ${n === 0 ? 'hoje' : `em ${n} dia${n > 1 ? 's' : ''}`}`));
-    }
-  }
-
   main.append(botoes(pet));
 
-  const saude = [['Microchip', pet.microchip], ['Alergias', pet.alergias], ['Remédios', pet.remedios]].filter(([, v]) => v?.trim());
+  const raiva = parseDateBR(pet.raiva_ate);
+  const antirrabica = raiva && (daysUntil(raiva, hoje) < 0
+    ? el('span', { class: 'vencida' }, `vencida desde ${fmt(raiva)}`)
+    : `válida até ${fmt(raiva)}`);
+  const saude = [['Antirrábica', antirrabica], ['Microchip', pet.microchip], ['Alergias', pet.alergias], ['Remédios', pet.remedios]]
+    .filter(([, v]) => typeof v === 'string' ? v.trim() : v);
   if (saude.length) main.append(el('section', {}, el('h2', {}, 'Saúde'),
     el('dl', {}, ...saude.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]))));
 
-  const hist = [...vacinas].sort((a, b) =>
-    (parseDateBR(b['Data de aplicação'])?.getTime() ?? 0) - (parseDateBR(a['Data de aplicação'])?.getTime() ?? 0));
-  if (hist.length) {
-    const tbody = el('tbody', {}, ...hist.map(v => {
-      const url = firstUrl(v.Comprovante);
-      return el('tr', {},
-        el('td', {}, v.Vacina.trim()),
-        el('td', {}, fmt(parseDateBR(v['Data de aplicação']))),
-        el('td', {}, fmt(parseDateBR(v['Próxima dose']))),
-        el('td', {}, v.Lote || ''),
-        el('td', {}, url ? el('a', { href: url, target: '_blank', rel: 'noopener', title: 'Comprovante' }, '📷') : ''));
-    }));
-    main.append(el('section', {}, el('h2', {}, 'Vacinas'),
-      el('table', {}, el('thead', {}, el('tr', {}, ...['Vacina', 'Aplicação', 'Próxima', 'Lote', ''].map(t => el('th', {}, t)))), tbody)));
-  }
+  if (VACINAS_URL) main.append(el('a', { class: 'tutor', href: `${VACINAS_URL}?pet=${encodeURIComponent(pet.id)}` }, '🔒 Carteira de vacinas (só o tutor)'));
 
   app.append(main);
 }
 
 try {
-  const [petsCsv, vacCsv] = await Promise.all(urls.map(async u => {
-    const r = await fetch(u, { cache: 'no-store' });
-    if (!r.ok) throw new Error(r.status);
-    return r.text();
-  }));
-  const pet = findPet(toObjects(parseCSV(petsCsv)), params.get('pet'));
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error(r.status);
+  const pet = findPet(toObjects(parseCSV(await r.text())), params.get('pet'));
   if (!pet) erro('Pet não encontrado');
-  else render(pet, toObjects(parseCSV(vacCsv)).filter(v => (v.Pet ?? '').trim().toLowerCase() === pet.id.trim().toLowerCase()));
+  else render(pet);
 } catch {
   erro('Não consegui carregar os dados agora');
 }

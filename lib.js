@@ -41,24 +41,7 @@ export function daysUntil(next, today) {
   return Math.round((midnight(next) - midnight(today)) / DAY);
 }
 
-export function vaccineStatus(next, today) {
-  if (!next) return 'none';
-  const n = daysUntil(next, today);
-  if (n < 0) return 'overdue';
-  return n <= 30 ? 'soon' : 'ok';
-}
-
 const norm = s => (s ?? '').trim().toLowerCase();
-
-export function latestByVaccine(records) {
-  const best = new Map();
-  for (const r of records) {
-    const key = norm(r.Vacina);
-    const t = parseDateBR(r['Data de aplicação'])?.getTime() ?? -Infinity;
-    if (!best.has(key) || t > best.get(key).t) best.set(key, { r, t });
-  }
-  return [...best.values()].map(v => v.r);
-}
 
 export function findPet(pets, id) {
   if (!id || !id.trim()) return null;
@@ -68,10 +51,6 @@ export function findPet(pets, id) {
 export const isTrue = v => ['true', 'verdadeiro', 'sim', '1'].includes(norm(v));
 
 export const digits = s => (s ?? '').replace(/\D/g, '');
-
-export function firstUrl(s) {
-  return (s ?? '').split(/[\s,]+/).find(p => p.startsWith('http')) ?? null;
-}
 
 // ponytail: assume número com DDI (55...). O Sheets remove o "+" inicial, então ele é recolocado aqui.
 export const phone = s => '+' + digits(s);
