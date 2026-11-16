@@ -94,7 +94,8 @@ function corrigirRaiva() {
   pets.getRange('K2:K').clearContent();
   const n = pets.getLastRow() - 1;
   pets.getRange(2, 11, n, 1).setFormulas([...Array(n)].map((_, i) =>
-    [`=IFERROR(1/(1/MAXIFS(Vacinas!$E:$E, Vacinas!$B:$B, $A${i + 2}, Vacinas!$C:$C, "Raiva")), "")`]));
+    // planilha em pt-BR: argumentos separados por ";"
+    [`=IFERROR(1/(1/MAXIFS(Vacinas!$E:$E; Vacinas!$B:$B; $A${i + 2}; Vacinas!$C:$C; "Raiva")); "")`]));
   pets.getRange('K:K').setNumberFormat('dd/mm/yyyy');
   SpreadsheetApp.flush();
   Logger.log('Depois: ' + pets.getRange('K2:K' + (n + 1)).getDisplayValues().join(' | '));
