@@ -39,10 +39,10 @@
 import { parseCSV, toObjects, parseDateBR, daysUntil, vaccineStatus, latestByVaccine, findPet, isTrue, digits, phone, firstUrl } from './lib.js';
 
 // Preencha depois de "Publicar na web" (Arquivo → Compartilhar → Publicar na web → CSV).
-const CSV_PETS = 'COLE_AQUI';
-const CSV_VACINAS = 'COLE_AQUI';
+const CSV_PETS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vShPi8d03hNgRrlSkktA2QTn3NJL3yikUWb24kzTEAgceg9yQmYBeQ6IXbyN_1eS2BUy0xBwoA4UfR6/pub?gid=0&single=true&output=csv';
+const CSV_VACINAS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vShPi8d03hNgRrlSkktA2QTn3NJL3yikUWb24kzTEAgceg9yQmYBeQ6IXbyN_1eS2BUy0xBwoA4UfR6/pub?gid=443474978&single=true&output=csv';
 // Contato de reserva: aparece sempre, mesmo se a planilha não carregar.
-const CONTATO = { whatsapp: '55DDDNUMERO', telefone: '+55DDDNUMERO' };
+const CONTATO = { whatsapp: '5584988001207', telefone: '+5584988001207' };
 
 const params = new URLSearchParams(location.search);
 const exemplo = params.get('dados') === 'exemplo';
