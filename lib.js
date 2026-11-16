@@ -72,3 +72,6 @@ export const digits = s => (s ?? '').replace(/\D/g, '');
 export function firstUrl(s) {
   return (s ?? '').split(/[\s,]+/).find(p => p.startsWith('http')) ?? null;
 }
+
+// ponytail: assume número com DDI (55...). O Sheets remove o "+" inicial, então ele é recolocado aqui.
+export const phone = s => '+' + digits(s);

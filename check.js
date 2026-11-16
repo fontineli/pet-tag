@@ -37,6 +37,8 @@ assert.equal(L.findPet([{id:'thor'}], 'rex'), null);
 for (const v of ['TRUE','verdadeiro','Sim','1']) assert.equal(L.isTrue(v), true);
 for (const v of ['FALSE','FALSO','', undefined]) assert.equal(L.isTrue(v), false);
 assert.equal(L.digits('+55 (11) 99999-9999'), '5511999999999');
+assert.equal(L.phone('5511999999999'), '+5511999999999');   // Sheets comeu o +
+assert.equal(L.phone('+55 (11) 99999-9999'), '+5511999999999');
 assert.equal(L.firstUrl('https://drive.google.com/a, https://drive.google.com/b'), 'https://drive.google.com/a');
 assert.equal(L.firstUrl(''), null);
 

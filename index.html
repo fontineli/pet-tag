@@ -36,7 +36,7 @@
 <body>
 <div id="app"></div>
 <script type="module">
-import { parseCSV, toObjects, parseDateBR, daysUntil, vaccineStatus, latestByVaccine, findPet, isTrue, digits, firstUrl } from './lib.js';
+import { parseCSV, toObjects, parseDateBR, daysUntil, vaccineStatus, latestByVaccine, findPet, isTrue, digits, phone, firstUrl } from './lib.js';
 
 // Preencha depois de "Publicar na web" (Arquivo → Compartilhar → Publicar na web → CSV).
 const CSV_PETS = 'COLE_AQUI';
@@ -58,7 +58,7 @@ function el(tag, attrs = {}, ...kids) {
 
 function botoes(pet) {
   const wa = digits(pet?.whatsapp || CONTATO.whatsapp);
-  const tel = pet?.telefone || CONTATO.telefone;
+  const tel = phone(pet?.telefone || CONTATO.telefone);
   const nome = pet?.nome || 'seu pet';
   const box = el('div', { class: 'botoes' },
     el('a', { class: 'wa', href: `https://wa.me/${wa}` }, 'WhatsApp'),
