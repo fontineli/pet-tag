@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Pet</title>
+<style>
+  :root { --bg:#faf7f2; --card:#fff; --ink:#2b2b2b; --muted:#777; --red:#c0392b; --yellow:#f3c64b; --green:#25d366; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.4 system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width:480px; margin:0 auto; padding:16px; }
+  .perdido { background:var(--red); color:#fff; text-align:center; font-weight:700; padding:12px; letter-spacing:.05em; }
+  header { text-align:center; margin:8px 0 16px; }
+  header img { width:140px; height:140px; object-fit:cover; border-radius:50%; border:4px solid #fff; box-shadow:0 2px 8px #0002; }
+  h1 { margin:8px 0 4px; font-size:1.8rem; }
+  .msg { color:var(--muted); margin:0; }
+  .alert { padding:10px 12px; border-radius:10px; margin:8px 0; font-weight:600; }
+  .alert.overdue { background:#f4c7c3; color:#7a1d14; }
+  .alert.soon { background:#fce8b2; color:#6b4e00; }
+  .botoes { display:grid; gap:8px; margin:16px 0; }
+  .botoes a { display:flex; align-items:center; justify-content:center; min-height:48px; border-radius:12px; font-weight:600; text-decoration:none; color:#fff; background:#444; }
+  .botoes a.wa { background:var(--green); }
+  section { background:var(--card); border-radius:14px; padding:12px 16px; margin:12px 0; box-shadow:0 1px 4px #0001; overflow-x:auto; }
+  h2 { font-size:1rem; margin:4px 0 8px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  dl { margin:0; display:grid; grid-template-columns:auto 1fr; gap:4px 12px; }
+  dt { color:var(--muted); }
+  dd { margin:0; }
+  table { width:100%; border-collapse:collapse; font-size:.95rem; }
+  th, td { text-align:left; padding:6px 4px; border-bottom:1px solid #eee; }
+  th { color:var(--muted); font-weight:500; }
+  td a { text-decoration:none; }
+  .erro { text-align:center; color:var(--muted); margin:32px 0 8px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import { parseCSV, toObjects, parseDateBR, daysUntil, vaccineStatus, latestByVaccine, findPet, isTrue, digits, firstUrl } from './lib.js';
+
+// Preencha depois de "Publicar na web" (Arquivo → Compartilhar → Publicar na web → CSV).
+const CSV_PETS = 'COLE_AQUI';
+const CSV_VACINAS = 'COLE_AQUI';
+// Contato de reserva: aparece sempre, mesmo se a planilha não carregar.
+const CONTATO = { whatsapp: '55DDDNUMERO', telefone: '+55DDDNUMERO' };
+
+const params = new URLSearchParams(location.search);
+const exemplo = params.get('dados') === 'exemplo';
+const urls = exemplo ? ['./exemplo/pets.csv', './exemplo/vacinas.csv'] : [CSV_PETS, CSV_VACINAS];
+const app = document.getElementById('app');
+
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  for (const k of kids) if (k != null) e.append(k);
+  return e;
+}
+
+function botoes(pet) {
+  const wa = digits(pet?.whatsapp || CONTATO.whatsapp);
+  const tel = pet?.telefone || CONTATO.telefone;
+  const nome = pet?.nome || 'seu pet';
+  const box = el('div', { class: 'botoes' },
+    el('a', { class: 'wa', href: `https://wa.me/${wa}` }, 'WhatsApp'),
+    el('a', { href: `tel:${tel}` }, 'Ligar'));
+  if (pet) {
+    const loc = el('a', { href: '#' }, 'Enviar localização');
+    loc.onclick = ev => {
+      ev.preventDefault();
+      const abrir = texto => { location.href = `https://wa.me/${wa}?text=${encodeURIComponent(texto)}`; };
+      if (!navigator.geolocation) return abrir(`Achei o ${nome}!`);
+      navigator.geolocation.getCurrentPosition(
+        p => abrir(`Achei o ${nome}! Estou aqui: https://maps.google.com/?q=${p.coords.latitude},${p.coords.longitude}`),
+        () => abrir(`Achei o ${nome}!`),
+        { timeout: 10000 });
+    };
+    box.append(loc);
+  }
+  return box;
+}
+
+function erro(texto) {
+  app.replaceChildren(el('main', {}, el('p', { class: 'erro' }, texto), botoes(null)));
+}
+
+function render(pet, vacinas) {
+  const hoje = new Date();
+  const fmt = d => d ? d.toLocaleDateString('pt-BR') : '—';
+  document.title = pet.nome;
+  const main = el('main');
+
+  if (isTrue(pet.perdido)) app.append(el('div', { class: 'perdido' }, 'ESTOU PERDIDO'));
+
+  main.append(el('header', {},
+    pet.foto ? el('img', { src: pet.foto, alt: pet.nome }) : null,
+    el('h1', {}, pet.nome),
+    pet.mensagem ? el('p', { class: 'msg' }, pet.mensagem) : null));
+
+  for (const v of latestByVaccine(vacinas)) {
+    const prox = parseDateBR(v['Próxima dose']);
+    const st = vaccineStatus(prox, hoje);
+    if (st === 'overdue') main.append(el('div', { class: 'alert overdue' }, `⚠ ${v.Vacina.trim()} atrasada desde ${fmt(prox)}`));
+    if (st === 'soon') {
+      const n = daysUntil(prox, hoje);
+      main.append(el('div', { class: 'alert soon' }, `${v.Vacina.trim()} vence ${n === 0 ? 'hoje' : `em ${n} dia${n > 1 ? 's' : ''}`}`));
+    }
+  }
+
+  main.append(botoes(pet));
+
+  const saude = [['Microchip', pet.microchip], ['Alergias', pet.alergias], ['Remédios', pet.remedios]].filter(([, v]) => v?.trim());
+  if (saude.length) main.append(el('section', {}, el('h2', {}, 'Saúde'),
+    el('dl', {}, ...saude.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]))));
+
+  const hist = [...vacinas].sort((a, b) =>
+    (parseDateBR(b['Data de aplicação'])?.getTime() ?? 0) - (parseDateBR(a['Data de aplicação'])?.getTime() ?? 0));
+  if (hist.length) {
+    const tbody = el('tbody', {}, ...hist.map(v => {
+      const url = firstUrl(v.Comprovante);
+      return el('tr', {},
+        el('td', {}, v.Vacina.trim()),
+        el('td', {}, fmt(parseDateBR(v['Data de aplicação']))),
+        el('td', {}, fmt(parseDateBR(v['Próxima dose']))),
+        el('td', {}, v.Lote || ''),
+        el('td', {}, url ? el('a', { href: url, target: '_blank', rel: 'noopener', title: 'Comprovante' }, '📷') : ''));
+    }));
+    main.append(el('section', {}, el('h2', {}, 'Vacinas'),
+      el('table', {}, el('thead', {}, el('tr', {}, ...['Vacina', 'Aplicação', 'Próxima', 'Lote', ''].map(t => el('th', {}, t)))), tbody)));
+  }
+
+  app.append(main);
+}
+
+try {
+  const [petsCsv, vacCsv] = await Promise.all(urls.map(async u => {
+    const r = await fetch(u, { cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status);
+    return r.text();
+  }));
+  const pet = findPet(toObjects(parseCSV(petsCsv)), params.get('pet'));
+  if (!pet) erro('Pet não encontrado');
+  else render(pet, toObjects(parseCSV(vacCsv)).filter(v => (v.Pet ?? '').trim().toLowerCase() === pet.id.trim().toLowerCase()));
+} catch {
+  erro('Não consegui carregar os dados agora');
+}
+</script>
+</body>
+</html>

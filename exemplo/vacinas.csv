@@ -1,0 +1,6 @@
+Carimbo de data/hora,Pet,Vacina,Data de aplicação,Próxima dose,Lote,Clínica / Veterinário,Comprovante
+01/11/2024 10:00:00,thor,V10,01/11/2024,01/11/2025,L111,Clínica Pet,
+01/11/2025 10:00:00,thor,V10,01/11/2025,01/11/2026,L222,Clínica Pet,"https://drive.google.com/open?id=a, https://drive.google.com/open?id=b"
+06/12/2025 10:00:00,thor,Raiva,06/12/2025,06/12/2026,R9,Clínica Pet,
+15/02/2026 10:00:00,thor,Giárdia,15/02/2026,,,Clínica Pet,
+10/03/2026 10:00:00,luna,V4,10/03/2026,10/03/2027,,,
