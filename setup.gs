@@ -102,7 +102,6 @@ function ajustar() {
 }
 
 const PLANILHA = '1nRWpjR6dF1mre2uApL0r5gTa87ENxyt8aCn1yAf1M6A';
-const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSf51VoDuO0zfEi1BM4Zdt7p7y3j-jJZruHdnhzoqy2y1ocvWQ/viewform';
 
 // Rode uma vez: coluna raiva_ate em Pets (a tag pública mostra só ela).
 function colunaRaiva() {
@@ -117,7 +116,9 @@ function colunaRaiva() {
 // Carteira privada: Implantar como app da Web, executar como "Eu", acesso "Somente eu".
 function doGet(e) {
   const filtro = (e.parameter.pet || '').trim().toLowerCase();
-  const [head, ...linhas] = SpreadsheetApp.openById(PLANILHA).getSheetByName('Vacinas').getDataRange().getDisplayValues();
+  const ss = SpreadsheetApp.openById(PLANILHA);
+  const formUrl = FormApp.openByUrl(ss.getFormUrl()).getPublishedUrl(); // fora do repo público
+  const [head, ...linhas] = ss.getSheetByName('Vacinas').getDataRange().getDisplayValues();
   const c = nome => head.indexOf(nome);
   const regs = linhas
     .map(l => ({ pet: l[c('Pet')].trim().toLowerCase(), vacina: l[c('Vacina')].trim(), aplic: l[c('Data de aplicação')],
@@ -129,7 +130,7 @@ function doGet(e) {
   let html = `<style>body{font:15px system-ui,sans-serif;margin:16px;color:#2b2b2b}h2{margin:24px 0 8px}
     table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:6px 4px;border-bottom:1px solid #eee}
     th{color:#777;font-weight:500}.atrasada{background:#f4c7c3}.vence{background:#fce8b2}a{text-decoration:none}</style>
-    <p><a target="_blank" href="${FORM_URL}">➕ Registrar vacina</a> · <a target="_blank" href="https://docs.google.com/spreadsheets/d/${PLANILHA}/edit">Planilha</a></p>`;
+    <p><a target="_blank" href="${formUrl}">➕ Registrar vacina</a> · <a target="_blank" href="https://docs.google.com/spreadsheets/d/${PLANILHA}/edit">Planilha</a></p>`;
   for (const pet of [...new Set(regs.map(r => r.pet))]) {
     const visto = new Set();
     html += `<h2>${esc_(pet)}</h2><table><tr><th>Vacina</th><th>Aplicação</th><th>Próxima</th><th>Lote</th><th>Clínica</th><th></th></tr>`;
