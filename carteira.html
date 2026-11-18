@@ -100,7 +100,7 @@ async function carregar(token) {
         guardado.limpa();
         return telaLogin('Essa conta não tem acesso à planilha, ou o login expirou. Entre com a conta do tutor.');
       }
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${(await r.json().catch(() => ({}))).error?.message || ''}`);
       const [p, v, f] = (await r.json()).valueRanges.map(x => x.values || []);
       [pets, vacinas, formUrl] = [toObjects(p), toObjects(v), f[0]?.[0] || ''];
     }
