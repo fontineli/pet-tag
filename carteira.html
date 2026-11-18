@@ -43,7 +43,7 @@ const CLIENT_ID = '477410038902-jjbr5d7kraei28224cm341n0ds6pvl5r.apps.googleuser
 const PLANILHA = '1nRWpjR6dF1mre2uApL0r5gTa87ENxyt8aCn1yAf1M6A';
 const SCOPE = 'https://www.googleapis.com/auth/spreadsheets.readonly';
 // Pets!M1 guarda o link de responder o formulário, fora do repositório público.
-const RANGES = ['Pets!A:K', 'Vacinas', 'Pets!M1'];
+const RANGES = ['Pets!A:K', 'Vacinas'];
 
 const params = new URLSearchParams(location.search);
 const filtro = (params.get('pet') || '').trim().toLowerCase();
@@ -93,16 +93,18 @@ async function carregar(token) {
       const csv = async f => toObjects(parseCSV(await (await fetch(f)).text()));
       [pets, vacinas] = await Promise.all([csv('./exemplo/pets.csv'), csv('./exemplo/vacinas.csv')]);
     } else {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${PLANILHA}/values:batchGet?` +
-        RANGES.map(r => 'ranges=' + encodeURIComponent(r)).join('&');
-      const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+      const api = `https://sheets.googleapis.com/v4/spreadsheets/${PLANILHA}/values`;
+      const auth = { headers: { Authorization: 'Bearer ' + token } };
+      // Pets!M1 (link do formulário) é opcional: pedido à parte, falha ignorada (ex.: aba sem coluna M).
+      const form = fetch(`${api}/${encodeURIComponent('Pets!M1')}`, auth).then(x => x.ok ? x.json() : {}).catch(() => ({}));
+      const r = await fetch(`${api}:batchGet?` + RANGES.map(r => 'ranges=' + encodeURIComponent(r)).join('&'), auth);
       if (r.status === 401 || r.status === 403) {
         guardado.limpa();
         return telaLogin('Essa conta não tem acesso à planilha, ou o login expirou. Entre com a conta do tutor.');
       }
       if (!r.ok) throw new Error(`HTTP ${r.status}: ${(await r.json().catch(() => ({}))).error?.message || ''}`);
-      const [p, v, f] = (await r.json()).valueRanges.map(x => x.values || []);
-      [pets, vacinas, formUrl] = [toObjects(p), toObjects(v), f[0]?.[0] || ''];
+      const [p, v] = (await r.json()).valueRanges.map(x => x.values || []);
+      [pets, vacinas, formUrl] = [toObjects(p), toObjects(v), (await form).values?.[0]?.[0] || ''];
     }
   } catch (e) {
     return app.replaceChildren(el('p', { class: 'aviso' }, 'Não consegui ler a planilha (' + e.message + ').'));
