@@ -35,8 +35,9 @@ import { parseCSV, toObjects, parseDateBR, daysUntil, findPet, isTrue, digits, p
 
 // Preencha depois de "Publicar na web" (Arquivo → Compartilhar → Publicar na web → CSV).
 const CSV_PETS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vShPi8d03hNgRrlSkktA2QTn3NJL3yikUWb24kzTEAgceg9yQmYBeQ6IXbyN_1eS2BUy0xBwoA4UfR6/pub?gid=0&single=true&output=csv';
-// Carteira completa: app da Web do Apps Script com acesso "Somente eu" (doGet em setup.gs).
-const VACINAS_URL = 'https://script.google.com/macros/s/AKfycbzuxF2NrYN1psCMPoXxEl_LQby_94Fb7bTI_fe25-B5RGiceQU4wydpLiLNxQcpjwWa/exec';
+// Carteira: a própria planilha, compartilhada só com o tutor. Trocamos o app da Web (doGet) porque
+// o Apps Script falha com várias contas Google logadas no navegador; o Sheets oferece trocar de conta.
+const VACINAS_URL = 'https://docs.google.com/spreadsheets/d/1nRWpjR6dF1mre2uApL0r5gTa87ENxyt8aCn1yAf1M6A/edit';
 // Contato de reserva: aparece sempre, mesmo se a planilha não carregar.
 const CONTATO = { whatsapp: '5584988001207', telefone: '+5584988001207' };
 
@@ -103,7 +104,7 @@ function render(pet) {
   if (saude.length) main.append(el('section', {}, el('h2', {}, 'Saúde'),
     el('dl', {}, ...saude.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]))));
 
-  if (VACINAS_URL) main.append(el('a', { class: 'tutor', href: `${VACINAS_URL}?pet=${encodeURIComponent(pet.id)}` }, '🔒 Carteira de vacinas (só o tutor)'));
+  if (VACINAS_URL) main.append(el('a', { class: 'tutor', href: VACINAS_URL }, '🔒 Carteira de vacinas (só o tutor)'));
 
   app.append(main);
 }

@@ -87,6 +87,38 @@ function setup() {
 
 const PLANILHA = '1nRWpjR6dF1mre2uApL0r5gTa87ENxyt8aCn1yAf1M6A';
 
+// Carteiras da Pérola (cachorra) e da Olivia (gata), fotos IMG_5217 e 5220–5224 de 18/11/2026.
+// ponytail: Vanguard Plus e Nobivac DHPPi+L = V8; as duas etiquetas Nobivac Feline = V5.
+const HISTORICO_2 = [
+  ['perola', 'V8', '21/06/2023', '14/07/2023', '013/22', 'Dr. José Amaro Valentim Neto'],
+  ['perola', 'V8', '14/07/2023', '07/08/2023', '013/22', 'Dr. José Amaro Valentim Neto'],
+  ['perola', 'V8', '07/08/2023', '07/08/2024', '025/22', 'Dr. José Amaro Valentim Neto'],
+  ['perola', 'Raiva', '07/08/2023', '07/08/2024', '023/22', 'Dr. José Amaro Valentim Neto'],
+  ['perola', 'Raiva', '04/03/2025', '04/03/2026', '003/24', 'Dra. Romana da Costa'],
+  ['perola', 'V8', '09/03/2025', '04/03/2026', '004/24', 'Dra. Romana da Costa'],
+  ['perola', 'Gripe', '13/11/2025', '01/12/2025', '004/23', 'Dr. Jorge J. Rodríguez Sánchez'],
+  ['perola', 'Gripe', '05/12/2025', '05/12/2026', '004/23', 'Dra. Paulyanna Medeiros'],
+  ['perola', 'V8', '07/05/2026', '07/05/2027', '028/24', 'Dra. Marijara Bandeira (VET Amiga)'],
+  ['perola', 'Raiva', '07/05/2026', '07/05/2027', '026/24', 'Dra. Marijara Bandeira (VET Amiga)'],
+  ['olivia', 'V5', '05/07/2024', '26/07/2024', '004/23', 'Dra. Ana Inez Medeiros Cabral'],
+  ['olivia', 'V5', '04/03/2025', '04/03/2026', '003/24 + 004/24', 'Dra. Romana da Costa'],
+  ['olivia', 'Raiva', '04/03/2025', '04/03/2026', '003/24', 'Dra. Romana da Costa'],
+  ['olivia', 'V5', '22/07/2026', '22/07/2027', '009/24', 'Dra. Marijara Bandeira (VET Amiga)'],
+  ['olivia', 'Raiva', '22/07/2026', '22/07/2027', '013/24', 'Dra. Marijara Bandeira (VET Amiga)'],
+];
+
+// Acrescenta HISTORICO_2 na aba Vacinas. Pula linha já lançada (pet + vacina + aplicação), então pode rodar de novo.
+function importar() {
+  const vac = SpreadsheetApp.openById(PLANILHA).getSheetByName('Vacinas');
+  const chave = (p, v, d) => `${p}|${v}|${d.getTime()}`;
+  const existe = new Set(vac.getRange(2, 2, Math.max(vac.getLastRow() - 1, 1), 3).getValues()
+    .filter(([p, , d]) => d instanceof Date).map(([p, v, d]) => chave(p, v, d)));
+  const novas = HISTORICO_2.map(([p, v, a, n, l, c]) => [data_(a), p, v, data_(a), data_(n), l, c])
+    .filter(r => !existe.has(chave(r[1], r[2], r[3])));
+  if (novas.length) vac.getRange(vac.getLastRow() + 1, 1, novas.length, 7).setValues(novas);
+  Logger.log(`Inseri ${novas.length} de ${HISTORICO_2.length} linhas.`);
+}
+
 // Coluna raiva_ate em Pets (a tag pública mostra só ela). Pet novo: arraste a fórmula de K para a linha nova.
 function corrigirRaiva() {
   const pets = SpreadsheetApp.openById(PLANILHA).getSheetByName('Pets');
