@@ -17,15 +17,16 @@ Está no ar e com dados reais.
 | Página da tag | https://fontineli.github.io/pet-tag/?pet=luck (também `olivia` e `perola`) | GitHub Pages, branch `main` |
 | Planilha "Pet Tag" | Drive de gabriel0fontineli@gmail.com, abas `Pets` e `Vacinas` | `Pets` publicada como CSV; `Vacinas` **não** é publicada |
 | Formulário "Vacinas do pet" | Drive, ligado à aba `Vacinas` | Tem a pergunta `Comprovante` (upload) |
-| Carteira privada | https://script.google.com/macros/s/AKfycbzuxF2NrYN1psCMPoXxEl_LQby_94Fb7bTI_fe25-B5RGiceQU4wydpLiLNxQcpjwWa/exec | App da Web com acesso "Somente eu". O link sem `?pet=` mostra todos os pets |
-| Script | `setup.gs` = projeto do Apps Script (`setup`, `corrigirRaiva`, `doGet`) | O editor precisa estar com a mesma versão do repositório |
+| Carteira privada | https://fontineli.github.io/pet-tag/carteira.html | Lê a planilha pela Sheets API depois de "Entrar com Google" (OAuth, escopo `spreadsheets.readonly`, app "Em teste" no Google Cloud). O link sem `?pet=` mostra todos os pets. `?dados=exemplo` mostra dados falsos sem login |
+| Script | `setup.gs` = projeto do Apps Script (`setup`, `corrigirRaiva`, `importar`) | O editor precisa estar com a mesma versão do repositório |
 
 ## Mudanças em relação ao spec
 
-- **As vacinas saíram da tag pública.** A tag mostra só identificação, botões, a linha "Antirrábica: válida até …" e um link 🔒 para a carteira. O histórico e os alertas ficam na carteira privada (`doGet` em `setup.gs`) e na planilha.
+- **As vacinas saíram da tag pública.** A tag mostra só identificação, botões, a linha "Antirrábica: válida até …" e um link 🔒 para a carteira. O histórico e os alertas ficam na carteira privada (`carteira.html`) e na planilha.
 - `raiva_ate` (coluna K de `Pets`) usa fórmula por linha: `MAXIFS` da `Próxima dose` com `Vacina = "Raiva"`.
 - As opções de vacina ficaram separadas (`V8`, `V10`, `V4`, `V5`), não "V8/V10". O motivo é que o agrupamento compara o nome.
-- `lib.js` perdeu `vaccineStatus`, `latestByVaccine` e `firstUrl`, que agora vivem só no `doGet`.
+- A carteira saiu do Apps Script (`doGet`) para `carteira.html` com login Google, porque o app da Web do Apps Script falha quando o navegador tem várias contas Google logadas. `vaccineStatus` e `latestByVaccine` voltaram para `lib.js`.
+- O link de responder o formulário fica em `Pets!M1`, fora do repositório; a carteira lê dali.
 
 ## Roteiro de teste
 
@@ -47,7 +48,7 @@ Está no ar e com dados reais.
 1. Rodar o roteiro de teste acima.
 2. Devolver os checkboxes em `Pets!J2:J4` (Inserir → Caixa de seleção). Eles se perderam quando a validação de dados foi limpa.
 3. Gravar as tags no NFC Tools, em Escrever → URL, uma por pet. **Não trancar a tag.** Testar com iPhone e Android.
-4. Salvar o link `/exec` e o link de responder o formulário na tela inicial do celular.
+4. Salvar o link da carteira e o link de responder o formulário na tela inicial do celular.
 5. Opcional: o link de responder o formulário ficou exposto no commit `b7cb96c`, que está no histórico do repositório público. Para fechar isso, gere um link novo do formulário ou reescreva o histórico.
 
 ## Pegadinhas já encontradas

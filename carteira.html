@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Carteira de vacinas</title>
+<style>
+  :root { --bg:#faf7f2; --card:#fff; --ink:#2b2b2b; --muted:#777; --red:#f4c7c3; --yellow:#fce8b2; --green:#d4edda; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.4 system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width:560px; margin:0 auto; padding:16px; }
+  .topo { display:flex; justify-content:space-between; align-items:center; gap:8px; margin:4px 0 12px; }
+  .topo h1 { font-size:1.3rem; margin:0; }
+  .topo a, .topo button { font:inherit; font-size:.9rem; color:var(--muted); background:none; border:0; text-decoration:none; cursor:pointer; padding:8px 0; }
+  .add { display:flex; align-items:center; justify-content:center; min-height:48px; border-radius:12px; font-weight:600; text-decoration:none; color:#fff; background:#444; margin:0 0 12px; }
+  section { background:var(--card); border-radius:14px; padding:12px 16px; margin:12px 0; box-shadow:0 1px 4px #0001; }
+  .pet { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .pet img { width:56px; height:56px; object-fit:cover; border-radius:50%; }
+  .pet h2 { margin:0; font-size:1.2rem; }
+  .vac { display:grid; grid-template-columns:1fr auto; gap:2px 8px; padding:8px 10px; border-radius:10px; margin:6px 0; background:#f6f6f6; }
+  .vac.atrasada { background:var(--red); } .vac.vence { background:var(--yellow); } .vac.ok { background:var(--green); }
+  .vac b { font-weight:600; } .vac small { color:#555; grid-column:1 / -1; }
+  .vac a { text-decoration:none; }
+  details { margin-top:8px; } summary { color:var(--muted); cursor:pointer; padding:6px 0; }
+  table { border-collapse:collapse; width:100%; font-size:.9rem; }
+  td, th { text-align:left; padding:6px 4px; border-bottom:1px solid #eee; vertical-align:top; }
+  th { color:var(--muted); font-weight:500; }
+  .tabela { overflow-x:auto; }
+  .entrar { text-align:center; margin:48px 0; }
+  .entrar button { font:inherit; font-weight:600; min-height:48px; padding:0 24px; border-radius:12px; border:1px solid #ccc; background:#fff; cursor:pointer; }
+  .aviso { color:var(--muted); text-align:center; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script type="module">
+import { parseCSV, toObjects, parseDateBR, daysUntil, latestByVaccine, vaccineStatus } from './lib.js';
+
+// ID do cliente OAuth (Google Cloud → Credenciais). É público por natureza; sem ele a página só mostra o aviso.
+const CLIENT_ID = '477410038902-jjbr5d7kraei28224cm341n0ds6pvl5r.apps.googleusercontent.com';
+const PLANILHA = '1nRWpjR6dF1mre2uApL0r5gTa87ENxyt8aCn1yAf1M6A';
+const SCOPE = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+// Pets!M1 guarda o link de responder o formulário, fora do repositório público.
+const RANGES = ['Pets!A:K', 'Vacinas', 'Pets!M1'];
+
+const params = new URLSearchParams(location.search);
+const filtro = (params.get('pet') || '').trim().toLowerCase();
+const exemplo = params.get('dados') === 'exemplo';
+const app = document.getElementById('app');
+const hoje = new Date();
+
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  for (const k of kids) if (k != null) e.append(k);
+  return e;
+}
+
+// ponytail: token só na aba (sessionStorage) e só até expirar; storage bloqueado = pede login de novo.
+const guardado = {
+  get() { try { const t = JSON.parse(sessionStorage.getItem('token')); return t && t.exp > Date.now() ? t.v : null; } catch { return null; } },
+  set(v, seg) { try { sessionStorage.setItem('token', JSON.stringify({ v, exp: Date.now() + (seg - 60) * 1000 })); } catch {} },
+  limpa() { try { sessionStorage.removeItem('token'); } catch {} },
+};
+
+function telaLogin(msg) {
+  app.replaceChildren(el('div', { class: 'entrar' },
+    el('p', {}, '🔒 Carteira de vacinas'),
+    msg ? el('p', { class: 'aviso' }, msg) : null,
+    CLIENT_ID ? el('button', { id: 'entrar' }, 'Entrar com Google') : el('p', { class: 'aviso' }, 'Falta configurar o CLIENT_ID.')));
+  document.getElementById('entrar')?.addEventListener('click', () => pedirToken(msg ? 'select_account' : ''));
+}
+
+function pedirToken(prompt) {
+  if (!window.google?.accounts) return telaLogin('O login do Google ainda não carregou. Tente de novo.');
+  google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID, scope: SCOPE,
+    callback: r => {
+      if (r.error) return telaLogin('Login cancelado.');
+      guardado.set(r.access_token, r.expires_in);
+      carregar(r.access_token);
+    },
+  }).requestAccessToken({ prompt });
+}
+
+async function carregar(token) {
+  app.replaceChildren(el('p', { class: 'aviso' }, 'Carregando…'));
+  let pets, vacinas, formUrl = '';
+  try {
+    if (exemplo) {
+      const csv = async f => toObjects(parseCSV(await (await fetch(f)).text()));
+      [pets, vacinas] = await Promise.all([csv('./exemplo/pets.csv'), csv('./exemplo/vacinas.csv')]);
+    } else {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${PLANILHA}/values:batchGet?` +
+        RANGES.map(r => 'ranges=' + encodeURIComponent(r)).join('&');
+      const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+      if (r.status === 401 || r.status === 403) {
+        guardado.limpa();
+        return telaLogin('Essa conta não tem acesso à planilha, ou o login expirou. Entre com a conta do tutor.');
+      }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const [p, v, f] = (await r.json()).valueRanges.map(x => x.values || []);
+      [pets, vacinas, formUrl] = [toObjects(p), toObjects(v), f[0]?.[0] || ''];
+    }
+  } catch (e) {
+    return app.replaceChildren(el('p', { class: 'aviso' }, 'Não consegui ler a planilha (' + e.message + ').'));
+  }
+  mostrar(pets, vacinas, formUrl);
+}
+
+function foto(r) { const u = (r['Comprovante'] || '').split(/[\s,]+/)[0]; return u.startsWith('http') ? u : ''; }
+
+function mostrar(pets, vacinas, formUrl) {
+  const regs = vacinas.map(v => ({
+    pet: (v['Pet'] || '').trim().toLowerCase(), vacina: (v['Vacina'] || '').trim(), aplic: v['Data de aplicação'] || '',
+    prox: v['Próxima dose'] || '', lote: v['Lote'] || '', clinica: v['Clínica / Veterinário'] || '', foto: foto(v),
+  })).filter(r => r.pet);
+
+  const topo = el('div', { class: 'topo' }, el('h1', {}, '🔒 Vacinas'),
+    filtro ? el('a', { href: 'carteira.html' }, 'Ver todos') : null,
+    exemplo ? null : el('button', { id: 'sair' }, 'Trocar conta'));
+  app.replaceChildren(topo);
+  document.getElementById('sair')?.addEventListener('click', () => { guardado.limpa(); pedirToken('select_account'); });
+  if (formUrl.startsWith('https://')) app.append(el('a', { class: 'add', href: formUrl, target: '_blank' }, '➕ Registrar vacina'));
+
+  const lista = pets.filter(p => p.id && (!filtro || p.id.trim().toLowerCase() === filtro));
+  if (!lista.length) return app.append(el('p', { class: 'aviso' }, 'Pet não encontrado.'));
+
+  for (const p of lista) {
+    const id = p.id.trim().toLowerCase();
+    const meus = regs.filter(r => r.pet === id);
+    const sec = el('section', {}, el('div', { class: 'pet' },
+      p.foto ? el('img', { src: p.foto, alt: '' }) : null, el('h2', {}, p.nome || p.id)));
+
+    for (const r of latestByVaccine(meus)) {
+      const st = vaccineStatus(r.prox, hoje);
+      const dias = st ? daysUntil(parseDateBR(r.prox), hoje) : null;
+      const quando = st === 'atrasada' ? `🔴 venceu em ${r.prox}` : st === 'vence' ? `🟡 vence em ${dias} dia${dias === 1 ? '' : 's'} (${r.prox})`
+        : st === 'ok' ? `🟢 em dia até ${r.prox}` : 'sem próxima dose';
+      sec.append(el('div', { class: 'vac ' + (st || '') },
+        el('b', {}, r.vacina),
+        r.foto ? el('a', { href: r.foto, target: '_blank', 'aria-label': 'Comprovante' }, '📷') : el('span'),
+        el('span', {}, quando),
+        el('span'),
+        el('small', {}, `Aplicada em ${r.aplic}${r.clinica ? ' · ' + r.clinica : ''}`)));
+    }
+    if (!meus.length) sec.append(el('p', { class: 'aviso' }, 'Nenhuma vacina registrada.'));
+
+    if (meus.length) {
+      const hist = [...meus].sort((a, b) => (parseDateBR(b.aplic) || 0) - (parseDateBR(a.aplic) || 0));
+      sec.append(el('details', {}, el('summary', {}, `Histórico (${hist.length})`),
+        el('div', { class: 'tabela' }, el('table', {},
+          el('tr', {}, ...['Aplicação', 'Vacina', 'Próxima', 'Lote', ''].map(h => el('th', {}, h))),
+          ...hist.map(r => el('tr', {}, el('td', {}, r.aplic), el('td', {}, r.vacina), el('td', {}, r.prox), el('td', {}, r.lote),
+            el('td', {}, r.foto ? el('a', { href: r.foto, target: '_blank' }, '📷') : '')))))));
+    }
+    app.append(sec);
+  }
+}
+
+const token = guardado.get();
+if (exemplo) carregar();
+else if (token) carregar(token);
+else telaLogin();
+</script>
+</body>
+</html>

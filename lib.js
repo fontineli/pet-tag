@@ -54,3 +54,23 @@ export const digits = s => (s ?? '').replace(/\D/g, '');
 
 // ponytail: assume número com DDI (55...). O Sheets remove o "+" inicial, então ele é recolocado aqui.
 export const phone = s => '+' + digits(s);
+
+// Carteira: dose mais recente por pet + vacina (regs com pet, vacina, aplic em dd/mm/aaaa).
+export function latestByVaccine(regs) {
+  const best = new Map();
+  for (const r of regs) {
+    const k = norm(r.pet) + '|' + norm(r.vacina);
+    const d = parseDateBR(r.aplic);
+    if (!d) continue;
+    if (!best.has(k) || d > parseDateBR(best.get(k).aplic)) best.set(k, r);
+  }
+  return [...best.values()].sort((a, b) => a.vacina.localeCompare(b.vacina, 'pt-BR'));
+}
+
+// 'atrasada' (venceu), 'vence' (até 30 dias), 'ok', ou null sem próxima dose.
+export function vaccineStatus(proxima, today) {
+  const d = parseDateBR(proxima);
+  if (!d) return null;
+  const n = daysUntil(d, today);
+  return n < 0 ? 'atrasada' : n <= 30 ? 'vence' : 'ok';
+}

@@ -25,4 +25,18 @@ assert.equal(L.digits('+55 (11) 99999-9999'), '5511999999999');
 assert.equal(L.phone('5511999999999'), '+5511999999999');   // Sheets comeu o +
 assert.equal(L.phone('+55 (11) 99999-9999'), '+5511999999999');
 
+// carteira
+const regs = [
+  { pet: 'luck', vacina: 'Raiva', aplic: '31/10/2025' },
+  { pet: 'luck', vacina: 'Raiva', aplic: '11/11/2026' },
+  { pet: 'Luck', vacina: 'raiva', aplic: '01/01/2020' },
+  { pet: 'luck', vacina: 'Gripe', aplic: '' },
+];
+assert.deepEqual(L.latestByVaccine(regs).map(r => r.aplic), ['11/11/2026']);
+assert.equal(L.vaccineStatus('15/11/2026', today), 'atrasada');
+assert.equal(L.vaccineStatus('16/11/2026', today), 'vence');
+assert.equal(L.vaccineStatus('16/12/2026', today), 'vence');   // 30 dias
+assert.equal(L.vaccineStatus('17/12/2026', today), 'ok');      // 31 dias
+assert.equal(L.vaccineStatus('', today), null);
+
 console.log('ok');
